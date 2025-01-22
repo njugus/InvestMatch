@@ -1,0 +1,33 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  Investor
+  Startup
+  Admin
+}
+
+model User {
+  UserID       String    @id @default(uuid()) // Primary Key, UUID for uniqueness
+  Username     String?   @unique @db.VarChar(50) // Optional but unique
+  first_name   String    @db.VarChar(50)         // First name of the user
+  last_name    String    @db.VarChar(50)         // Last name of the user
+  Email        String    @unique @db.VarChar(100) // Unique Email
+  PasswordHash String                                 // Stores hashed passwords
+  Role         Role      @default(Investor)         // Enum with default value
+  LastLogin    DateTime?                             // Optional last login timestamp
+  createdAt    DateTime  @default(now())            // Auto-set when user is created
+  updatedAt    DateTime  @updatedAt                 // Auto-updates on record changes
+}
