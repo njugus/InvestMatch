@@ -1,4 +1,5 @@
-import Investor from '../Models/Investor.model.js'
+import Investor from '../../Models/Investor.model.js'
+import authMiddleware from '../../Auth/authmiddleware.js'
 
 //create an investor's profile
  
@@ -8,9 +9,16 @@ const investorProfile = async(req, res) => {
         const { Name, Mission, Vision, Preferences } = req.body
 
         //get access to the token to generate UserID
-        const 
+        const UserID = req.user.UserID;
+
+    
+
+        
+
 
     }catch(error){
         //
     }
 }
+
+export default investorProfile;
