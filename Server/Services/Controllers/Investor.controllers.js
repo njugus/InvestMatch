@@ -50,7 +50,23 @@ export const investorProfile = async(req, res) => {
 //get all investors
 export const getAllInvestors = async(req, res) => {
     try{
-        //
+
+        //check whether the req.user exists
+        if(!req.user || req.user.Role !== "Admin"){
+            return res.status(403).json({
+                success : false,
+                message : "Unauthorized User.Requires Admin Access!!"
+            })
+        }
+        //if the person is an admin then proceed
+        //lean() for performance optimization
+        const investors = await Investor.find().lean()
+
+        //response
+        res.status(200).json({
+            success : true,
+            registeredInvestors : investors
+        })
     }catch(error){
         res.status(500).json({
             success : false,
@@ -58,6 +74,10 @@ export const getAllInvestors = async(req, res) => {
         })
     }
 }
+
+
+//get a specific investor based on ID
+
 
 
 
