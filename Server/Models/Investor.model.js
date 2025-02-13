@@ -5,7 +5,6 @@ import { v4 as uuidv4 } from 'uuid'
 const InvestorSchema =  new mongoose.Schema({
     InvestorID: { type: String, required: true, unique: true },
     UserID: { type: String, required: true }, // Foreign key referencing PostgreSQL Users
-    Name: { type: String, required: true },
     Mission: { type: String },
     Vision: { type: String },
     Preferences: {
