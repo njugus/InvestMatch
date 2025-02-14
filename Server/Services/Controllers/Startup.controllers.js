@@ -111,4 +111,31 @@ export const GetAllStartups = async(req, res)=> {
 }
 
 
+//get a specific startup using the ID 
+export const GetSpecificStartup = async(req, res) => {
+    try{
+        const{ id } = req.params;
+        const startup = await StartupModel.findOne({ StartupID: id }).lean();
+
+        if(!startup){
+            return res.status(404).json({
+                success : false,
+                message : "Startup not found"
+            })
+        }
+
+        res.status(200).json({
+            success : true,
+            startup
+        })
+    }catch(error){
+        res.status(500).json({
+            success : false,
+            message : error.message
+        })
+    }
+}
+
+
+
 
