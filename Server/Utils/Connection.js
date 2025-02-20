@@ -1,20 +1,25 @@
-import mongoose from 'mongoose'
-import dotenv from 'dotenv'
+import { MongoClient } from "mongodb";
+import dotenv from "dotenv";
 
-//load the enviroment variables from the dotenv file
-dotenv.config()
+dotenv.config(); // Load environment variables from .env file
 
-//access the URI
-const URI = process.env.MONGO_URI;
+const uri = process.env.MONGO_URI;
 
-//establish a connection
-(
-    async() => {
-        try{
-            await mongoose.connect(URI, { useNewUrlParser: true, useUnifiedTopology: true });
-            console.log("Connection Successfull")
-        }catch(err){
-            console.log("Connection Failed: ", err.message);  
-        }
+const connectDB = async () => {
+    try {
+        const client = new MongoClient(uri, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+
+        await client.connect();
+        console.log(`MongoDB Connected: ${client.s.options.srvHost}`);
+
+        return client.db(); // Return the connected database instance
+    } catch (error) {
+        console.error(`Error: ${error.message}`);
+        process.exit(1); // Exit the process if connection fails
     }
-)();
+};
+
+export default connectDB;

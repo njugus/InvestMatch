@@ -109,3 +109,36 @@ export const userRole = async(req, res) => {
     }
 }
 
+export const FindAllRegisteredUsers = async (req, res) => {
+    try {
+        const allRegisteredUsers = await prisma.user.findMany({
+            select: {
+                UserID: true,
+                Username: true,
+                Email: true,
+                Role: true,
+                createdAt: true,
+            },
+            take: 100, // Limits results to 100 users
+        });
+
+        if (allRegisteredUsers.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: "No registered users found.",
+                users: [],
+            });
+        }
+
+        res.status(200).json({
+            success: true,
+            users: allRegisteredUsers,
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
