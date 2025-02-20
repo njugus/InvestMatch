@@ -188,6 +188,31 @@ export const UpdateFinancialMetrics = async (req, res) => {
     }
 };
 
+// update the traction metrics
+export const UpdateTractionMetrics = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { TractionMetrics } = req.body;
+
+        if (!TractionMetrics || typeof TractionMetrics !== "object") {
+            return res.status(400).json({ success: false, message: "Invalid traction metrics format" });
+        }
+
+        const updatedStartup = await StartupModel.findOneAndUpdate(
+            { StartupID: id },
+            { $set: { TractionMetrics } },
+            { new: true, runValidators: true }
+        ).lean();
+
+        if (!updatedStartup) {
+            return res.status(404).json({ success: false, message: "Startup not found" });
+        }
+
+        res.status(200).json({ success: true, startup: updatedStartup });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
 
 
 
