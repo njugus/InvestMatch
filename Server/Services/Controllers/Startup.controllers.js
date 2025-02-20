@@ -136,6 +136,33 @@ export const GetSpecificStartup = async(req, res) => {
     }
 }
 
+// update the founders array
+export const UpdateStartupFounders = async (req, res) => {
+    try {
+        const { id } = req.params;  // StartupID
+        const { Founders } = req.body; // Array of founders
+
+        if (!Founders || !Array.isArray(Founders)) {
+            return res.status(400).json({ success: false, message: "Founders should be an array" });
+        }
+
+        const updatedStartup = await StartupModel.findOneAndUpdate(
+            { StartupID: id },
+            { $set: { Founders } },
+            { new: true, runValidators: true }
+        ).lean();
+
+        if (!updatedStartup) {
+            return res.status(404).json({ success: false, message: "Startup not found" });
+        }
+
+        res.status(200).json({ success: true, startup: updatedStartup });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+
 
 
 
