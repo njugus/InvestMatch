@@ -5,11 +5,11 @@ import { getAllInvestors } from "../Controllers/Investor.controllers.js";
 import { getInvestorByID } from "../Controllers/Investor.controllers.js";
 import { getUserInvestment } from "../Controllers/Investor.controllers.js";
 
-const route_1 = Router()
+const route_investors = Router()
 
-route_1.post("/", authMiddleware, investorProfile)
-route_1.get("/", authMiddleware, getAllInvestors)
-route_1.get("/:id", getInvestorByID)
+route_investors.post("/", authMiddleware, investorProfile)
+route_investors.get("/", authMiddleware, getAllInvestors)
+route_investors.get("/:id", getInvestorByID)
 
 
-export default route_1;
+export default route_investors;
