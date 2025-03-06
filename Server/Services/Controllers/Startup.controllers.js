@@ -1,13 +1,14 @@
 
-import StartupModel from "../../Models/Startup.model";
+import StartupModel from "../../Models/Startup.model.js";
 import { v4 as uuidv4 } from "uuid";
+import { connectDB } from '../../Utils/Connection.js'
 
 // Create a new startup
 export const CreateNewStartup = async (req, res) => {
     try {
         // Get the UserID from the authenticated user
         const UserID = req.user.UserID;
-
+        console.log(UserID)
         // Destructure request body
         const { 
             Name, Industry, FundingStage, GeographicLocation, 
@@ -23,7 +24,9 @@ export const CreateNewStartup = async (req, res) => {
         }
 
         // Create new startup entry
-        const newStartup = new StartupModel({
+        const db = await connectDB()
+        const collection = db.collection("Startup")
+        const newStartup = {
             StartupID: uuidv4(),
             UserID,
             Name,
@@ -46,10 +49,17 @@ export const CreateNewStartup = async (req, res) => {
             ContactEmail,
             CreatedAt: new Date(),  // Automatically set timestamps
             UpdatedAt: new Date()
-        });
+        };
 
-        // Save to database
-        await newStartup.save();
+        // insert the document inside the startup collection
+        const result = await collection.insertOne(newStartup)
+
+        if(!result.acknowledged){
+            return res.status(500).json({
+                success : false,
+                message : "could not create the startup"
+            })
+        }
 
         // Return success response
         res.status(201).json({
@@ -67,55 +77,73 @@ export const CreateNewStartup = async (req, res) => {
     }
 };
 
-//get all startups
-export const GetAllStartups = async(req, res)=> {
-    try{
-        //extract the query parameters  from the request
+
+// Get all startups with filtering, sorting, and pagination
+export const GetAllStartups = async (req, res) => {
+    try {
+        // Extract query parameters from the request
         const { industry, fundingStage, location, sortBy, order, page, limit } = req.query;
 
-        //create a filter object
-        const filters = {}
-        if(industry) filters.Industry = industry
-        if(fundingStage) filters.FundingStage = fundingStage
-        if(location) filters.Location = location
+        // Create a filter object for MongoDB query
+        const filters = {};
+        if (industry) filters.Industry = industry;
+        if (fundingStage) filters.FundingStage = fundingStage;
+        if (location) filters.GeographicLocation = location; // Fixed field name
 
-        //sortby
-        const sortingOptions = {}
-        if(sortBy){
+        // Sorting options
+        const sortingOptions = {};
+        if (sortBy) {
             sortingOptions[sortBy] = order === "asc" ? 1 : -1;
+        } else {
+            sortingOptions["CreatedAt"] = -1; // Default sorting (newest first)
         }
 
-        //setup pagination
+        // Pagination setup
         const pageNum = parseInt(page) || 1;
         const pageSize = parseInt(limit) || 10;
         const skip = (pageNum - 1) * pageSize;
 
-        //fetch the data using the filtering, sortBy and with pagination
-        const startups = await StartupModel.find(filters).sort(sortingOptions).skip(skip).limit(pageSize).lean()
-        const totalCount = await StartupModel.countDocuments(filters)
+        // Connect to the database
+        const db = await connectDB();
+        const collection = db.collection("Startup");
 
-        //return the total number of filtered results to the frontend for pagination purposes
+        // Fetch startups with filters, sorting, and pagination
+        const startups = await collection
+            .find(filters)
+            .sort(sortingOptions)
+            .skip(skip)
+            .limit(pageSize)
+            .toArray(); // Fix: Convert cursor to an array
+
+        // Count total results for pagination
+        const totalCount = await collection.countDocuments(filters);
+
+        // Return the total number of filtered results for pagination purposes
         res.status(200).json({
-            success : true,
+            success: true,
             pageNum,
             pageSize,
-            totalStartups : totalCount,
+            totalStartups: totalCount,
             startups
-        })
-    }catch(error){
+        });
+
+    } catch (error) {
+        console.error("Error fetching startups:", error); // Log error for debugging
         res.status(500).json({
-            success : false,
-            message : error.message
-        })
+            success: false,
+            message: "Internal Server Error. Please try again later.",
+        });
     }
-}
+};
 
 
 //get a specific startup using the ID 
 export const GetSpecificStartup = async(req, res) => {
     try{
         const{ id } = req.params;
-        const startup = await StartupModel.findOne({ StartupID: id }).lean();
+        const db = await connectDB()
+        const collection = db.collection("Startup")
+        const startup = await collection.findOne({ StartupID: id }).toArray();
 
         if(!startup){
             return res.status(404).json({
@@ -136,83 +164,154 @@ export const GetSpecificStartup = async(req, res) => {
     }
 }
 
-// update the founders array
+// Update the Founders array in a startup 
 export const UpdateStartupFounders = async (req, res) => {
     try {
-        const { id } = req.params;  // StartupID
-        const { Founders } = req.body; // Array of founders
+        const UserID = req.user.UserID; // Extract UserID from token
+        const { id } = req.params;  // Extract StartupID from request
+        const { Founders } = req.body; // Founders array
 
+        // Validate Founders input
         if (!Founders || !Array.isArray(Founders)) {
-            return res.status(400).json({ success: false, message: "Founders should be an array" });
+            return res.status(400).json({ success: false, message: "Founders must be a valid array" });
         }
 
-        const updatedStartup = await StartupModel.findOneAndUpdate(
-            { StartupID: id },
-            { $set: { Founders } },
-            { new: true, runValidators: true }
-        ).lean();
+        // Connect to database
+        const db = await connectDB();
+        const collection = db.collection("Startup");
 
-        if (!updatedStartup) {
+        // Find the startup by ID
+        const startup = await collection.findOne({ StartupID: id });
+
+        // Check if startup exists
+        if (!startup) {
             return res.status(404).json({ success: false, message: "Startup not found" });
         }
 
-        res.status(200).json({ success: true, startup: updatedStartup });
+        // Check if the logged-in user is the owner of the startup
+        if (startup.UserID !== UserID) {
+            return res.status(403).json({ success: false, message: "Unauthorized: You do not own this startup" });
+        }
+
+        // Update the Founders array
+        const updatedStartup = await collection.findOneAndUpdate(
+            { StartupID: id },
+            { $set: { Founders } },
+            { returnDocument: "after" } // Returns updated document
+        );
+
+        // Send success response
+        res.status(200).json({ success: true, message: "Founders updated successfully", startup: updatedStartup });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error("Error updating founders:", error); // Log error for debugging
+        res.status(500).json({ success: false, message: "Internal Server Error. Please try again later." });
     }
 };
+
 
 //update the financial metrics object
 export const UpdateFinancialMetrics = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { FinancialMetrics } = req.body;
+        const UserID = req.user.UserID; // Extract UserID from token
+        const { id } = req.params;  // Extract StartupID from request
+        const { FinancialMetrics } = req.body; // FinancialMetrics object
 
+        // Validate input format
         if (!FinancialMetrics || typeof FinancialMetrics !== "object") {
             return res.status(400).json({ success: false, message: "Invalid financial metrics format" });
         }
 
-        const updatedStartup = await StartupModel.findOneAndUpdate(
-            { StartupID: id },
-            { $set: { FinancialMetrics } },
-            { new: true, runValidators: true }
-        ).lean();
+        // Connect to database
+        const db = await connectDB();
+        const collection = db.collection("Startup");
 
-        if (!updatedStartup) {
+        // Find the startup by ID
+        const startup = await collection.findOne({ StartupID: id });
+
+        // Check if startup exists
+        if (!startup) {
             return res.status(404).json({ success: false, message: "Startup not found" });
         }
 
-        res.status(200).json({ success: true, startup: updatedStartup });
+        // Check if the logged-in user is the owner of the startup
+        if (startup.UserID !== UserID) {
+            return res.status(403).json({ success: false, message: "Unauthorized: You do not own this startup" });
+        }
+
+        // Validate Financial Metrics fields (Optional but recommended)
+        const validMetrics = ["Revenue", "GrowthRate", "UserBase"];
+        for (let key in FinancialMetrics) {
+            if (!validMetrics.includes(key)) {
+                return res.status(400).json({ success: false, message: `Invalid financial metric: ${key}` });
+            }
+        }
+
+        // Update the Financial Metrics
+        const updatedStartup = await collection.findOneAndUpdate(
+            { StartupID: id },
+            { $set: { FinancialMetrics } },
+            { returnDocument: "after" } 
+        );
+        res.status(200).json({ success: true, message: "Financial metrics updated successfully", startup: updatedStartup });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error("Error updating financial metrics:", error); 
+        res.status(500).json({ success: false, message: "Internal Server Error. Please try again later." });
     }
 };
 
 // update the traction metrics
 export const UpdateTractionMetrics = async (req, res) => {
     try {
-        const { id } = req.params;
-        const { TractionMetrics } = req.body;
+        const UserID = req.user.UserID; 
+        const { id } = req.params;  
+        const { TractionMetrics } = req.body; 
 
+        // Validate input format
         if (!TractionMetrics || typeof TractionMetrics !== "object") {
             return res.status(400).json({ success: false, message: "Invalid traction metrics format" });
         }
 
-        const updatedStartup = await StartupModel.findOneAndUpdate(
-            { StartupID: id },
-            { $set: { TractionMetrics } },
-            { new: true, runValidators: true }
-        ).lean();
+        // Connect to database
+        const db = await connectDB();
+        const collection = db.collection("Startup");
 
-        if (!updatedStartup) {
+        // Find the startup by ID
+        const startup = await collection.findOne({ StartupID: id });
+
+        // Check if startup exists
+        if (!startup) {
             return res.status(404).json({ success: false, message: "Startup not found" });
         }
 
-        res.status(200).json({ success: true, startup: updatedStartup });
+        // Check if the logged-in user is the owner of the startup
+        if (startup.UserID !== UserID) {
+            return res.status(403).json({ success: false, message: "Unauthorized: You do not own this startup" });
+        }
+
+        // Validate allowed Traction Metrics fields
+        const validMetrics = ["Customers", "FundingReceived", "MonthlyBurnRate"];
+        for (let key in TractionMetrics) {
+            if (!validMetrics.includes(key)) {
+                return res.status(400).json({ success: false, message: `Invalid traction metric: ${key}` });
+            }
+        }
+
+        // Update the Traction Metrics
+        const updatedStartup = await collection.findOneAndUpdate(
+            { StartupID: id },
+            { $set: { TractionMetrics } },
+            { returnDocument: "after" } // Returns updated document
+        );
+
+        // Send success response
+        res.status(200).json({ success: true, message: "Traction metrics updated successfully", startup: updatedStartup });
+
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error("Error updating traction metrics:", error); // Log error for debugging
+        res.status(500).json({ success: false, message: "Internal Server Error. Please try again later." });
     }
 };
-
 
 

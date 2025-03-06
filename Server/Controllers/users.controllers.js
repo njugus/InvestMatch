@@ -1,9 +1,13 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import dotenv from 'dotenv'
+
+dotenv.config()
+const JWT = process.env.JWT_SECRET
 
 const prisma = new PrismaClient()
-const JWT_SECRET = "jdjdjjksksjsjsjs";
+// const JWT_SECRET = "jdjdjjksksjsjsjs";
 
 //signUp
 export const signUp = async(req, res) =>  {
@@ -44,11 +48,14 @@ export const signUp = async(req, res) =>  {
         
         //create the token
         const token = jwt.sign(
-            { UserID : newUser.UserID},
-            JWT_SECRET,
-            { expiresIn : "1h"}
-        )
-
+            { 
+                UserID: newUser.UserID, 
+                first_name: newUser.first_name 
+            },
+            JWT, 
+            { expiresIn: "1h" } 
+        );
+        
         //send the token inside the response to the client
         res.status(201).json({
             success : true,
@@ -65,7 +72,6 @@ export const signUp = async(req, res) =>  {
 export const userRole = async(req, res) => {
     const { Role } = req.body;
     const authHeader = req.headers.authorization; //extract the token from the req.header
-
     try{
         //ensure the token is present
         if(!authHeader || !authHeader.startsWith("Bearer ")){
@@ -76,11 +82,12 @@ export const userRole = async(req, res) => {
         }
 
         //extract and verify the token(the token will also be decoded)
+        
         const userToken = authHeader.split(" ")[1]
-        const decoded = jwt.verify(userToken, JWT_SECRET)
+        console.log(userToken + " " + JWT)
+        const decoded = jwt.verify(userToken, JWT)
         const UserID = decoded.UserID
-
-
+       
         //verify that the roles entered by the user are correct
         const validRoles = ["Investor", "Startup", "Admin"]
         if(!validRoles.includes(Role)){
@@ -102,7 +109,7 @@ export const userRole = async(req, res) => {
             record : newUserRole
         })
     }catch(error){
-        req.status(500).json({
+        res.status(500).json({
             success : false,
             message : error.message
         })

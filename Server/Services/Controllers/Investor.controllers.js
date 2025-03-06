@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid'
 import { PrismaClient } from '@prisma/client'
 import { connectDB } from '../../Utils/Connection.js'
 
+
 const prisma = new PrismaClient()
 
 //create an investor's profile
@@ -71,82 +72,99 @@ export const investorProfile = async (req, res) => {
         });
     }
 };
-
-//get all investors
-export const getAllInvestors = async(req, res) => {
-    try{
-
-        //check whether the req.user exists
-        if(!req.user || req.user.Role !== "Admin"){
+// Get all investors
+export const getAllInvestors = async (req, res) => {
+    try {
+        // Ensure the user exists and has admin privileges
+        if (!req.user) {
             return res.status(403).json({
-                success : false,
-                message : "Unauthorized User.Requires Admin Access!!"
-            })
+                success: false,
+                message: "Unauthorized User. Admin Access Required!",
+            });
         }
-        //if the person is an admin then proceed
-        //lean() for performance optimization
-        const investors = await Investor.find().lean()
 
-        //response
+        // Connect to the database (assuming a global connection is available)
+        const db = await connectDB();
+        const investorDetails = db.collection("Investor");
+
+        // Fetch investors while omitting sensitive fields (e.g., password)
+        const investors = await investorDetails.find({})
+            .project({ password: 0 }) // Exclude sensitive fields
+            .toArray(); // Convert cursor to an array
+
+        // Response
         res.status(200).json({
-            success : true,
-            registeredInvestors : investors
-        })
-    }catch(error){
+            success: true,
+            registeredInvestors: investors,
+        });
+
+    } catch (error) {
+        console.error("Error fetching investors:", error); // Log error for debugging
         res.status(500).json({
-            success : false,
-            message : error.message
-        })
+            success: false,
+            message: "Internal Server Error. Please try again later.",
+        });
     }
-}
+};
 
-
-//get all details of specific investor based on ID
-export const getInvestorByID = async(req, res) => {
-    try{
-        //destructure the id from req.params
-        const { id } = req.params
-
-        //query the MongoDB server and the PostGRE database at the same time
-        const[investor, investorProfile] = await Promise.all([
-            prisma.user.findUnique({
-                where : { UserID : id }, //get the user from Postgre Database
-                select : { first_name, last_name, Email, Role },
-            }),
-            Investor.findOne({UserID : id}).lean() //get the user from the MongoDB database
-        ])
-
-        if(!investor){
-            return res.status(404).json({
-                success : false,
-                message : "Investor Not Found"
-            })
+// Get investor details by ID
+export const getInvestorByID = async (req, res) => {
+    try {
+        // Destructure and validate ID
+        const { id } = req.params;
+        if (!id) {
+            return res.status(400).json({ success: false, message: "Investor ID is required" });
         }
 
-        if(!investorProfile){
+        // Connect to MongoDB
+        const db = await connectDB();
+        const collection = db.collection("Investor");
+
+        // Fetch investor from PostgreSQL first
+        const investor = await prisma.user.findUnique({
+            where: { UserID: id }, // Fetch from PostgreSQL
+            select: {
+                first_name: true,
+                last_name: true,
+                Email: true,
+                Role: true,
+            },
+        });
+
+        // If investor is not found in PostgreSQL, no need to query MongoDB
+        if (!investor) {
             return res.status(404).json({
-                success : false,
-                message : "Investor Profile Details not found"
-            })
+                success: false,
+                message: "Investor not found in PostgreSQL",
+            });
         }
 
-        //merge the details gathered
-        const fullInvestorProfile = { ...investor, ...investorProfile }
+        // Fetch investor profile from MongoDB in parallel
+        const investorProfile = await collection.findOne({ UserID: id });
 
-        //return the response to the client
+        if (!investorProfile) {
+            return res.status(404).json({
+                success: false,
+                message: "Investor profile details not found in MongoDB",
+            });
+        }
+
+        // Merge details
+        const fullInvestorProfile = { ...investor, ...investorProfile };
+
+        // Return response
         res.status(200).json({
-            success : true,
-            result : fullInvestorProfile
-        })
-
-    }catch(error){
+            success: true,
+            result: fullInvestorProfile,
+        });
+    } catch (error) {
+        console.error("Error fetching investor details:", error); // Log error for debugging
         res.status(500).json({
-            success : false,
-            message : error.message
-        })
+            success: false,
+            message: "Internal Server Error. Please try again later.",
+        });
     }
-}
-
+};
 
 //get the profile data only of a specific investor
 export const getProfileData = async(req, res) => {
@@ -155,7 +173,11 @@ export const getProfileData = async(req, res) => {
         const { id } = req.params;
 
         //query the details
-        const profileData = await Investor.findOne({ InvestorID : id});
+        // const profileData = await Investor.findOne({ InvestorID : id});
+        // Connect to MongoDB
+        const db = await connectDB();
+        const collection = db.collection("Investor");
+        const profileData = await collection.findOne({ InvestorID : id})
 
         if(!profileData){
             return res.status(404).json({
@@ -176,43 +198,99 @@ export const getProfileData = async(req, res) => {
     }
 }
 
-//get the investment history
+
+
+// Get the investment history of a specific investor
 export const getUserInvestment = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Fetch investor with only the InvestmentHistory field
-        const investor = await Investor.findOne({ InvestorID: id }, "InvestmentHistory").lean();
-
-        // Check if the investor exists
-        if (!investor) {
-            return res.status(404).json({
+        // Validate ID
+        if (!id) {
+            return res.status(400).json({
                 success: false,
-                message: "Investor not found"
+                message: "Investor ID is required.",
             });
         }
 
-        // Check if investments exist
-        if (!investor.InvestmentHistory?.length) {
+        // Connect to MongoDB
+        const db = await connectDB();
+        const collection = db.collection("Investor");
+
+        // Fetch only the InvestmentHistory field for the given InvestorID
+        const investor = await collection.findOne(
+            { InvestorID: id },
+            { projection: { InvestmentHistory: 1, _id: 0 } } // Return only InvestmentHistory field
+        );
+
+        // Check if the investor exists and has an investment history
+        if (!investor || !investor.InvestmentHistory?.length) {
             return res.status(404).json({
                 success: false,
-                message: "No investments found"
+                message: "No investments found for this investor.",
             });
         }
 
+        // Return investment history
         res.status(200).json({
             success: true,
-            investments: investor.InvestmentHistory
+            investments: investor.InvestmentHistory,
         });
 
     } catch (error) {
-        console.error("Error fetching user investments:", error); // Useful for debugging
+        console.error("Error fetching user investments:", error); // Log error for debugging
         res.status(500).json({
             success: false,
-            message: "Server error. Please try again later."
+            message: "Internal Server Error. Please try again later.",
         });
     }
 };
 
 
+//update the investors list
+export const updateUsersInvestments = async(req, res) => {
+    try{
+        const UserID = req.user.UserID; 
+        const { id } = req.params;  
+        const { InvestmentHistory } = req.body;
+
+        //check whether the Investments array is an array
+        if (!InvestmentHistory || !Array.isArray(InvestmentHistory)) {
+            return res.status(400).json({ success: false, message: "Investment history must be a valid array" });
+        }
+
+        // Connect to database
+        const db = await connectDB();
+        const collection = db.collection("Investor");
+
+        // Find the investor by ID
+        const investor = await collection.findOne({ InvestorID: id });
+
+        //if investor does not exist
+        if (!investor) {
+            return res.status(404).json({ success: false, message: "Investor not found" });
+        }
+
+        //verify whether the person who wants to update the investment history has a token and is the owner of the profile     
+        if (investor.UserID !== UserID) {
+            return res.status(403).json({ success: false, message: "Unauthorized: You do not own this investor account" });
+        }
+
+        const updatedInvestmentHistory = await collection.findOneAndUpdate(
+            { InvestorID: id },
+            { $set: { InvestmentHistory } },
+            { returnDocument: "after" } // Returns updated document
+        );
+
+        // Send success response
+        res.status(200).json({ success: true, message: "InvestmentHistory updated successfully", result: updatedInvestmentHistory });
+
+    }catch(error){
+        console.error("Error Updating investor's investment history: ", error.message)
+        res.status(500).json({
+            success : false,
+            message : "Server Error..Please try again later"
+        })
+    }
+}
 

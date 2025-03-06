@@ -20,7 +20,7 @@ const authMiddleware = (req, res, next) => {
         }
         //decode the token
         const decoded = jwt.verify(token, JWT_SECRET)
-
+        console.log(decoded)
         //access the user details
         req.user = decoded
 

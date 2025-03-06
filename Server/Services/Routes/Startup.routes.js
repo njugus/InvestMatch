@@ -12,7 +12,7 @@ route_3.post("/", authMiddleware, CreateNewStartup)
 route_3.get("/",authMiddleware, GetAllStartups)
 route_3.get("/:id", authMiddleware, GetSpecificStartup)
 route_3.patch("/:id/founders", authMiddleware, UpdateStartupFounders)
-route_3.patch(":/id/financial-metrics", authMiddleware, UpdateFinancialMetrics)
+route_3.patch("/:id/financial-metrics", authMiddleware, UpdateFinancialMetrics)
 route_3.patch("/:id/traction-metrics", authMiddleware, UpdateTractionMetrics)
 
-
+export default route_3;
