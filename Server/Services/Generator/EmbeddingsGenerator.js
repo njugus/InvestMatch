@@ -2,7 +2,7 @@ import { pipeline } from "@xenova/transformers";
 
 const model = await pipeline("feature-extraction", "sentence-transformers/all-MiniLM-L6-v2");
 
-export const generateEmbedding = async (text) => {
+const generateEmbedding = async (text) => {
   try {
     if (!text || typeof text !== "string") {
       throw new Error("Invalid input text");
@@ -15,3 +15,5 @@ export const generateEmbedding = async (text) => {
     return null;
   }
 };
+
+export default generateEmbedding;
