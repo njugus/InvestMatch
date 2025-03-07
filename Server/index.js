@@ -6,7 +6,8 @@ import loginRoute from './Routes/login.routes.js';
 import route_investors from './Services/Routes/Investors.Routes.js';
 import investment_route from './Services/Routes/InvestmentRoutes.js'
 import route_3 from './Services/Routes/Startup.routes.js'
-
+import updateInvestorEmbeddings from './Services/Embeddings/InvestorEmbeddings.js';
+import updateStartupEmbeddings from './Services/Embeddings/StartupEmbeddings.js'
 
 const app = express()
 const PORT = 5000;

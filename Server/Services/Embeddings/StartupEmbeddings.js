@@ -1,4 +1,4 @@
-import { connectDB } from "../utils/Connection.js";
+import { connectDB } from "../../Utils/Connection.js";
 import generateEmbedding from "../Generator/EmbeddingsGenerator.js";
 
 const updateStartupEmbeddings = async () => {
@@ -50,6 +50,5 @@ const updateStartupEmbeddings = async () => {
     console.error("Error updating startup embeddings:", err.message);
   }
 };
-
 // Run the function
-updateStartupEmbeddings();
+export default updateStartupEmbeddings;

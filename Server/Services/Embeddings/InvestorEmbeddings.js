@@ -6,6 +6,8 @@ const updateInvestorEmbeddings = async () => {
     // Set up the database connection
     const db = await connectDB();
     // Find investors who don't have embeddings
+
+    const investorsCollection = db.collection("Investor")
     const investors = await investorsCollection.find({ Embedding: { $exists: false } }).toArray();
     if (investors.length === 0) {
       console.log("No investors need embedding updates.");
@@ -54,6 +56,7 @@ const updateInvestorEmbeddings = async () => {
   }
 };
 
-// Run the function
-updateInvestorEmbeddings();
 
+
+// Run the function
+export default updateInvestorEmbeddings;

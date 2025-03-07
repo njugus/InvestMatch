@@ -1,6 +1,6 @@
 import { pipeline } from "@xenova/transformers";
 
-const model = await pipeline("feature-extraction", "sentence-transformers/all-MiniLM-L6-v2");
+const model = await pipeline("feature-extraction", "Xenova/all-MiniLM-L6-v2");
 
 const generateEmbedding = async (text) => {
   try {
