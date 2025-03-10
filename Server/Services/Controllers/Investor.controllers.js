@@ -294,3 +294,57 @@ export const updateUsersInvestments = async(req, res) => {
     }
 }
 
+// Get all investors and update embeddings in batch
+export const updateInvestorEmbeddings = async (req, res) => {
+    try {
+        // Ensure the user has admin privileges
+        if (!req.user) {
+            return res.status(403).json({
+                success: false,
+                message: "Unauthorized User. Admin Access Required!",
+            });
+        }
+
+        // Connect to the database
+        const db = await connectDB();
+        const investorDetails = db.collection("Investor");
+
+        // Fetch all investors
+        const investors = await investorDetails.find({}).toArray();
+
+        // Prepare bulk update operations
+        const bulkOps = investors.map((investor) => {
+            if (investor.Embedding && investor.Embedding.data) {
+                // Convert object to array
+                const embeddingArray = Object.values(investor.Embedding.data);
+
+                return {
+                    updateOne: {
+                        filter: { _id: investor._id },
+                        update: { $set: { "Embedding.data": embeddingArray } }
+                    }
+                };
+            }
+        }).filter(Boolean); // Remove any undefined values
+
+        // Perform batch update if there are valid operations
+        if (bulkOps.length > 0) {
+            await investorDetails.bulkWrite(bulkOps);
+            console.log("Successfully updated investors embeddings")
+        }
+
+        // Response
+        res.status(200).json({
+            success: true,
+            message: "Investor embeddings updated successfully in batch!",
+        });
+
+    } catch (error) {
+        console.error("Error updating investor embeddings:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error. Please try again later.",
+        });
+    }
+};
+

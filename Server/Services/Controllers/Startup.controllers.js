@@ -2,6 +2,7 @@
 import StartupModel from "../../Models/Startup.model.js";
 import { v4 as uuidv4 } from "uuid";
 import { connectDB } from '../../Utils/Connection.js'
+import authMiddleware from '../../Auth/authmiddleware.js'
 
 // Create a new startup
 export const CreateNewStartup = async (req, res) => {
@@ -314,4 +315,57 @@ export const UpdateTractionMetrics = async (req, res) => {
     }
 };
 
+// Get all startups and update embeddings in batch
+export const updateStartupEmbeddings = async (req, res) => {
+    try {
+        // Ensure the user has admin privileges
+        if (!req.user) {
+            return res.status(403).json({
+                success: false,
+                message: "Unauthorized User. Admin Access Required!",
+            });
+        }
+
+        // Connect to the database
+        const db = await connectDB();
+        const startupDetails = db.collection("Startup");
+
+        // Fetch all startups
+        const startups = await startupDetails.find({}).toArray();
+
+        // Prepare bulk update operations
+        const bulkOps = startups.map((startup) => {
+            if (startup.Embedding && startup.Embedding.data) {
+                // Convert object to array
+                const embeddingArray = Object.values(startup.Embedding.data);
+
+                return {
+                    updateOne: {
+                        filter: { _id: startup._id },
+                        update: { $set: { "Embedding.data": embeddingArray } }
+                    }
+                };
+            }
+        }).filter(Boolean); // Remove any undefined values
+
+        // Perform batch update if there are valid operations
+        if (bulkOps.length > 0) {
+            await startupDetails.bulkWrite(bulkOps);
+            console.log("Successfully updated the startup embeddings into array objects")
+        }
+
+        // Response
+        res.status(200).json({
+            success: true,
+            message: "Startup embeddings updated successfully in batch!",
+        });
+
+    } catch (error) {
+        console.error("Error updating startup embeddings:", error);
+        res.status(500).json({
+            success: false,
+            message: "Internal Server Error. Please try again later.",
+        });
+    }
+};
 
