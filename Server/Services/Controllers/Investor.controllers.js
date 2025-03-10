@@ -3,6 +3,7 @@ import authMiddleware from '../../Auth/authmiddleware.js'
 import { v4 as uuidv4 } from 'uuid'
 import { PrismaClient } from '@prisma/client'
 import { connectDB } from '../../Utils/Connection.js'
+import cosineSimilarity from '../../Services/MatchingService/cosineSimilarity.js'
 
 
 const prisma = new PrismaClient()
@@ -348,3 +349,59 @@ export const updateInvestorEmbeddings = async (req, res) => {
     }
 };
 
+//controller to find investors Top Startups
+export const findTopStartupsForInvestors = async(req, res) => {
+    try{
+        const{ id } = req.params;
+        //connect to the databse
+        const db = await connectDB()
+        const investorCollection = db.collection("Investor")
+        const startupCollection = db.collection("Startup")
+
+        //find details of a particularInvestor
+        const investorDetails = await investorCollection.findOne({
+            UserID: id 
+        })
+        if(!investorDetails){
+            return res.status(404).json({
+                success : false,
+                message : "Investor details not found"
+            })
+        }
+
+        //fetch all the stratup's embeddings alongside their names and ids
+        const startups = await startupCollection.find({}, { projection: { Name: 1, StartupID : 1, Embedding: 1 } }).toArray();
+        if(startups.length === 0){
+            return res.status(404).json({
+                success : false,
+                message : "No Startups found"
+            })
+        }
+
+        //extract the investor's embedding
+        const investorEmbedding = investor.Embedding.data;
+
+        //perform the similariy
+        const rankedStartups = startups
+        .filter(s => s.Embedding?.data) // Ensure embedding exists
+        .map(startup => ({
+            name: startup.Name,
+            id : startup.StartupID,
+            similarity: cosineSimilarity(investorEmbedding, startup.Embedding.data),
+        }))
+        .sort((a, b) => b.similarity - a.similarity) // Sort by highest similarity
+
+    // Return the top 5 startups
+    // return rankedStartups.slice(0, 5);
+    res.status(200).json({
+        success : true,
+        result : rankedStartups.slice(0, 5)
+    })
+    
+    }catch(err){
+        res.status(500).json({
+            success : false,
+            message : err.message
+        })
+    }
+}
