@@ -6,7 +6,7 @@ const filterStartups = async (query) => {
     const filters = {};
     if (industry) filters.Industry = industry;
     if (fundingStage) filters.FundingStage = fundingStage;
-    if (location) filters.GeographicLocation = location;
+    if (location) filters.GeographicLocation = { $regex: location, $options: "i" };
 
     // Sorting options
     const sortingOptions = {};

@@ -3,6 +3,7 @@ import StartupModel from "../../Models/Startup.model.js";
 import { v4 as uuidv4 } from "uuid";
 import { connectDB } from '../../Utils/Connection.js'
 import authMiddleware from '../../Auth/authmiddleware.js'
+import filterStartups from "../../Utils/filters.js";
 
 // Create a new startup
 export const CreateNewStartup = async (req, res) => {
