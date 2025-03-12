@@ -80,46 +80,67 @@ export const CreateNewStartup = async (req, res) => {
 
 
 // Get all startups with filtering, sorting, and pagination
+// export const GetAllStartups = async (req, res) => {
+//     try {
+//         // Extract query parameters from the request
+//         const { industry, fundingStage, location, sortBy, order, page, limit } = req.query;
+
+//         // Create a filter object for MongoDB query
+//         const filters = {};
+//         if (industry) filters.Industry = industry;
+//         if (fundingStage) filters.FundingStage = fundingStage;
+//         if (location) filters.GeographicLocation = location; // Fixed field name
+
+//         // Sorting options
+//         const sortingOptions = {};
+//         if (sortBy) {
+//             sortingOptions[sortBy] = order === "asc" ? 1 : -1;
+//         } else {
+//             sortingOptions["CreatedAt"] = -1; // Default sorting (newest first)
+//         }
+
+//         // Pagination setup
+//         const pageNum = parseInt(page) || 1;
+//         const pageSize = parseInt(limit) || 10;
+//         const skip = (pageNum - 1) * pageSize;
+
+//         // Connect to the database
+//         const db = await connectDB();
+//         const collection = db.collection("Startup");
+
+//         // Fetch startups with filters, sorting, and pagination
+//         const startups = await collection
+//             .find(filters)
+//             .sort(sortingOptions)
+//             .skip(skip)
+//             .limit(pageSize)
+//             .toArray(); // Fix: Convert cursor to an array
+
+//         // Count total results for pagination
+//         const totalCount = await collection.countDocuments(filters);
+
+//         // Return the total number of filtered results for pagination purposes
+//         res.status(200).json({
+//             success: true,
+//             pageNum,
+//             pageSize,
+//             totalStartups: totalCount,
+//             startups
+//         });
+
+//     } catch (error) {
+//         console.error("Error fetching startups:", error); // Log error for debugging
+//         res.status(500).json({
+//             success: false,
+//             message: "Internal Server Error. Please try again later.",
+//         });
+//     }
+// };
+
 export const GetAllStartups = async (req, res) => {
     try {
-        // Extract query parameters from the request
-        const { industry, fundingStage, location, sortBy, order, page, limit } = req.query;
+        const { startups, totalCount, pageNum, pageSize } = await filterStartups(req.query);
 
-        // Create a filter object for MongoDB query
-        const filters = {};
-        if (industry) filters.Industry = industry;
-        if (fundingStage) filters.FundingStage = fundingStage;
-        if (location) filters.GeographicLocation = location; // Fixed field name
-
-        // Sorting options
-        const sortingOptions = {};
-        if (sortBy) {
-            sortingOptions[sortBy] = order === "asc" ? 1 : -1;
-        } else {
-            sortingOptions["CreatedAt"] = -1; // Default sorting (newest first)
-        }
-
-        // Pagination setup
-        const pageNum = parseInt(page) || 1;
-        const pageSize = parseInt(limit) || 10;
-        const skip = (pageNum - 1) * pageSize;
-
-        // Connect to the database
-        const db = await connectDB();
-        const collection = db.collection("Startup");
-
-        // Fetch startups with filters, sorting, and pagination
-        const startups = await collection
-            .find(filters)
-            .sort(sortingOptions)
-            .skip(skip)
-            .limit(pageSize)
-            .toArray(); // Fix: Convert cursor to an array
-
-        // Count total results for pagination
-        const totalCount = await collection.countDocuments(filters);
-
-        // Return the total number of filtered results for pagination purposes
         res.status(200).json({
             success: true,
             pageNum,
@@ -129,11 +150,8 @@ export const GetAllStartups = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error fetching startups:", error); // Log error for debugging
-        res.status(500).json({
-            success: false,
-            message: "Internal Server Error. Please try again later.",
-        });
+        console.error("Error fetching startups:", error);
+        res.status(500).json({ success: false, message: "Internal Server Error." });
     }
 };
 

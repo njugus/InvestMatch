@@ -4,7 +4,6 @@ import cosineSimilarity from '../../Services/MatchingService/cosineSimilarity.js
 // Controller to find an investor’s top 5 startup matches
 export const findTopStartupsForInvestors = async (req, res) => {
     try {
-        console.log(req.user)
         //extract UserID from decoded token
         const UserID = req.user.UserID
         console.log(UserID)
@@ -24,6 +23,7 @@ export const findTopStartupsForInvestors = async (req, res) => {
 
         // Extract the investor's embedding
         const investorEmbedding = investorDetails.Embedding.data;
+        const investorID = investorDetails.InvestorID
 
         // Fetch all startup embeddings alongside their names and IDs
         const startups = await startupCollection.find(
