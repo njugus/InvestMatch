@@ -27,6 +27,7 @@ export const LoginForm = ({ onLogin }) => {
             <ErrorMessage name="password" component="div" className="error" />
   
             <button type="submit">Login</button>
+            {/* <p className="switch-link">Don't have an account? <span onClick={switchToSignup}>Sign Up</span></p> */}
           </Form>
         </Formik>
       </div>
@@ -68,6 +69,7 @@ export const SignupForm = ({ onSignup }) => {
         <ErrorMessage name="password" component="div" className="error" />
 
         <button type="submit">Sign Up</button>
+        {/* <p className="switch-link">Have an account? <span onClick={switchToLogin}>Login</span></p> */}
       </Form>
     </Formik>
     </div>
