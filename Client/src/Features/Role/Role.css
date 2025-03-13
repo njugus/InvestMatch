@@ -1,0 +1,42 @@
+.role-form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    background-color: #f8f9fc;
+  }
+  
+  .role-form-container h2 {
+    color: #002147;
+    margin-bottom: 20px;
+  }
+  
+  .role-form {
+    background: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  .role-form select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+  }
+  
+  .role-form button {
+    width: 100%;
+    padding: 10px;
+    background: gold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  
+  .role-form button:hover {
+    background: #d4af37;
+  }
+  

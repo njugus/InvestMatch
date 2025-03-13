@@ -9,12 +9,19 @@ import route_3 from './Services/Routes/Startup.routes.js'
 import route_5 from './Services/Routes/Recommendations.routes.js'
 import updateInvestorEmbeddings from './Services/Embeddings/InvestorEmbeddings.js';
 import updateStartupEmbeddings from './Services/Embeddings/StartupEmbeddings.js'
+import cors from 'cors'
 
 const app = express()
 const PORT = 5000;
 
 app.use(express.json());
 app.use(cookieParser())
+app.use(cors({
+    origin: 'http://localhost:5173', 
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true, 
+    optionsSuccessStatus: 204
+}))
 
 
 app.use("/signUp/api/v1", route_1)
